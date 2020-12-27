@@ -1,13 +1,14 @@
-from collections.abc import Mapping
+from collections import Mapping
 from datetime import date, datetime
 from operator import itemgetter
 import json, logging, time, threading, warnings
-import queue
+import Queue as queue
 
 import boto3
 import boto3.session
 from botocore.exceptions import ClientError
 
+handler_base_class = logging.Handler
 
 def _idempotent_create(_callable, *args, **kwargs):
     try:
@@ -29,11 +30,10 @@ class WatchtowerWarning(UserWarning):
     pass
 
 
-class CloudWatchLogHandler(logging.Handler):
+class CloudWatchLogHandler(handler_base_class):
     """
     Create a new CloudWatch log handler object. This is the main entry point to the functionality of the module. See
     http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/WhatIsCloudWatchLogs.html for more information.
-
     :param log_group: Name of the CloudWatch log group to write logs to. By default, the name of this module is used.
     :type log_group: String
     :param stream_name:
@@ -106,7 +106,7 @@ class CloudWatchLogHandler(logging.Handler):
                  boto3_profile_name=None, create_log_group=True, log_group_retention_days=None,
                  create_log_stream=True, json_serialize_default=None, max_message_size=256 * 1024,
                  endpoint_url=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        handler_base_class.__init__(self, *args, **kwargs)
         self.log_group = log_group
         self.stream_name = stream_name
         self.use_queues = use_queues
@@ -278,4 +278,4 @@ class CloudWatchLogHandler(logging.Handler):
             q.put(self.END)
         for q in self.queues.values():
             q.join()
-        super().close()
+        handler_base_class.close(self)
